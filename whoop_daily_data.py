@@ -129,11 +129,13 @@ for x in values:
 	print(event_time)
 	if len(x['strain']['workouts']) == 0:
 		print("Empty list")
+		print(x)
 		splunk_payload = splunk_payload + '{"time": "' + str(
 			event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + str(
 			x) + '}'
 	else:
 		print("Not empty list")
+		print(x)
 		splunk_payload = splunk_payload + '{"time": "' + str(
 			event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + str(
 			x) + '}'
