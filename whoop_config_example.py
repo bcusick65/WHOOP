@@ -20,4 +20,4 @@ channel_header = 'random_string'                                # Additional req
 
 # Splunk HEC variables - heart rate data
 hec_hr_token = 'your_heartrate_hec_token'                       # Insert Splunk HEC token here
-hec_hr_sourcetype = 'whoop:hr:data'                             Creating sourcetype for heart rate data
+hec_hr_sourcetype = 'whoop:hr:data'                             #Creating sourcetype for heart rate data
