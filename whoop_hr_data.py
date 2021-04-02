@@ -64,15 +64,12 @@ for x in values:
     event_time = x['time']
     four_hours = 14400000
     zulu_time = event_time + four_hours
-    splunk_payload = splunk_payload + '{"time": ' + str(zulu_time) + ', "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "hr_data", "sourcetype": "' + hec_hr_sourcetype + '", "event": ' + str(x) + '}'
+    splunk_payload = splunk_payload + '{"time": ' + str(zulu_time) + ', "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "hr_data", "sourcetype": "' + hec_hr_sourcetype + '", "event": ' + json.dumps(x) + '}'
 
-# Fix single quotes
-splunk_payload = splunk_payload.replace("'",'"')
-print("Batched events: \n", splunk_payload)
 
 # Set HEC header
 auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
 
 # Send HEC event to Splunk
-r = requests.post('http://zeus.cusickbrian.com:8088/services/collector', data=splunk_payload, headers=auth_header)
+r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
 print("Splunk HEC post status: \n", r.text)

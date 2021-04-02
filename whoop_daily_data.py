@@ -88,14 +88,6 @@ for x in values:
 		x) + '}'
 
 
-# Cheap way to fix single quotes
-splunk_payload = splunk_payload.replace("'", '"')
-splunk_payload = splunk_payload.replace('None', '"None"')
-splunk_payload = splunk_payload.replace('False', '"False"')
-splunk_payload = splunk_payload.replace('True', '"True"')
-
-print("Batched events: \n", splunk_payload)
-
 # Send HEC event to Splunk
 r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
 print(r)
