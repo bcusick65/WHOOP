@@ -1,7 +1,7 @@
 from whoop_config import *
 import requests
 from datetime import datetime
-
+import json
 
 # Set HEC header
 auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
@@ -23,14 +23,11 @@ for x in values:
 	if len(x['strain']['workouts']) == 0:
 		print("Empty list")
 		print(x)
-		splunk_payload = splunk_payload + '{"time": "' + str(
-			event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + str(
-			x) + '}'
+		splunk_payload = splunk_payload + '{"time": "' + str(event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + json.dumps(x) + '}'
 	else:
 		print("Not empty list")
 		print(x)
-		splunk_payload = splunk_payload + '{"time": "' + str(event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + str(x) + '}]}'
-
+		splunk_payload = splunk_payload + '{"time": "' + str(event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + json.dumps(x) + '}'
 
 # Cheap way to fix single quotes
 splunk_payload = splunk_payload.replace("'",'"')
@@ -40,7 +37,6 @@ splunk_payload = splunk_payload.replace('False','"False"')
 print("Batched events: \n", splunk_payload)
 
 # Send HEC event to Splunk
-#r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
-#print(r)
-#print("Splunk HEC post status: \n", r.text)
-
+r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
+print(r)
+print("Splunk HEC post status: \n", r.text)

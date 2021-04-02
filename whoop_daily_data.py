@@ -4,25 +4,42 @@ from datetime import datetime
 import pytz
 import requests as requests
 from whoop_config import *
+import json
+import os
 
 
 
 # Get access creds
-r = requests.post('https://api-7.whoop.com/oauth/token', json={
-	"username": username,
-	"password": password,
-	"grant_type": "password",
-	"issueRefresh": False
-})
-if r.status_code != 200:
-	print("Invalid Creds")
-	exit()
-else:
-	print("Credentials Accepted")
+#Create this as a 'def' (function) right here. Call this function inside this file
+def get_oauth_creds():
+    r = requests.post('https://api-7.whoop.com/oauth/token', json={
+        "username": username,
+        "password": password,
+        "grant_type": "password",
+        "issueRefresh": False
+    })
 
-# Set user/token
-userid = r.json()['user']['id']
-token = r.json()['access_token']
+
+    if r.status_code != 200:
+        print("Invalid Creds")
+        exit()
+    else:
+        print("Credentials Accepted")
+
+    # Set user/token
+    #userid = r.json()['user']['id']
+    #token = r.json()['access_token']
+    return r
+
+
+# Write token to file
+# This will create a temp file within the project
+# dir that contains your repeatable acccess creds
+response = get_oauth_creds()
+print(os.getcwd())
+with open('file_token.txt', 'w') as file:
+    file = file.write(json.dumps(response.json()))
+
 
 # Set up request
 url = 'https://api-7.whoop.com/users/{}/cycles'.format(userid)
@@ -30,7 +47,7 @@ url = 'https://api-7.whoop.com/users/{}/cycles'.format(userid)
 # Set today as the time range
 x = datetime.now()
 start = '2021-03-24T00:00:00.000Z'
-end = '2021-03-29T00:00:00.000Z'
+end = '2021-03-31T00:00:00.000Z'
 #start = x.strftime("%Y-%m-%dT00:00:00.000Z")
 #end = x.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
@@ -121,25 +138,15 @@ splunk_payload = ""
 
 # Stack events for Splunk HEC payload and adjust Splunk timezone issue
 for x in values:
-	event_time = x['during']['lower']
+	event_time = x['recovery']['timestamp']
 	print(event_time)
 	event_time = datetime.strptime(event_time, "%Y-%m-%dT%H:%M:%S.%f%z")
 	event_time = str(event_time.timestamp() * 1000)
 	event_time = str(round(float(event_time)))
 	print(event_time)
-	if len(x['strain']['workouts']) == 0:
-		print("Empty list")
-		print(x)
-		splunk_payload = splunk_payload + '{"time": "' + str(
-			event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + str(
-			x) + '}'
-	else:
-		print("Not empty list")
-		print(x)
-		splunk_payload = splunk_payload + '{"time": "' + str(
-			event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + str(
-			x) + '}'
-		print("New payload: ", splunk_payload)
+	splunk_payload = splunk_payload + '{"time": "' + str(
+		event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + json.dumps(
+		x) + '}'
 
 
 # Cheap way to fix single quotes
@@ -156,8 +163,8 @@ print("Batched events: \n", splunk_payload)
 auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
 
 # Send HEC event to Splunk
-#r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
-#print(r)
-#print("Splunk HEC post status: \n", r.text)
+r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
+print(r)
+print("Splunk HEC post status: \n", r.text)
 
 

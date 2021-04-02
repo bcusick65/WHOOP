@@ -9,26 +9,18 @@
 from datetime import datetime, timedelta
 import requests as requests
 from whoop_config import *
+import json
 
+# Set variables
+response_json = ""
 
-# Get access creds
-r = requests.post('https://api-7.whoop.com/oauth/token', json={
-     "username": username,
-     "password": password,
-     "grant_type": "password",
-     "issueRefresh": False
-  })
+# Pull stored access creds from disk
+with open('file_token.txt', 'r') as file_token:
+    response_json = file_token.read()
 
-
-if r.status_code != 200:
-    print("Invalid Creds")
-    exit()
-else:
-    print("Credentials Accepted")
-
-# Set user/token
-userid = r.json()['user']['id']
-token = r.json()['access_token']
+dict_response_json = json.loads(response_json)
+token = dict_response_json['access_token']
+userid = dict_response_json['user']['id']
 
 
 # Set up request to HR endpoint
@@ -56,31 +48,31 @@ r = requests.get(url, params=params, headers=headers)
 
 # Check if creds are re-accepted
 if r.status_code != 200:
-    print("Bad request, see ya.")
+    print(r, r.text)
     exit()
 else:
-    print("Whoop!")
+    print(r)
 
 # Put payload in object
-data_raw = r.json()
 values = r.json()['values']
 
-# Begin formatting for Splunk HEC stacked events
-# Also fix Splunk timezone issue without using /raw endpoint
+# Begin formatting for Splunk HEC stacked events and
+# fix Splunk timezone issue without using raw HEC endpoint
 splunk_payload = ""
 
 for x in values:
-	event_time = x['time']
-	four_hours = 14400000
-	zulu_time = event_time + four_hours
-	splunk_payload = splunk_payload + '{"time": ' + str(zulu_time) + ', "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "hr_data", "sourcetype": "' + hec_hr_sourcetype + '", "event": ' + str(x) + '}'
+    event_time = x['time']
+    four_hours = 14400000
+    zulu_time = event_time + four_hours
+    splunk_payload = splunk_payload + '{"time": ' + str(zulu_time) + ', "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "hr_data", "sourcetype": "' + hec_hr_sourcetype + '", "event": ' + str(x) + '}'
 
 # Fix single quotes
 splunk_payload = splunk_payload.replace("'",'"')
 print("Batched events: \n", splunk_payload)
 
+# Set HEC header
+auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
+
 # Send HEC event to Splunk
 r = requests.post('http://zeus.cusickbrian.com:8088/services/collector', data=splunk_payload, headers=auth_header)
 print("Splunk HEC post status: \n", r.text)
-
-
