@@ -2,9 +2,11 @@
 
 # Author: Brian Cusick
 # Pull heart rate data at a 60 second interval (instead of 6 or 600 second options)
-# Pulls the last 5 minutes
-# Should run every 5 minutes
+# Whoop uploads to Cloud every 10 minutes if your app is always open
+# Therefore, pulling earliest=-20m latest=-10m, every 10 minutes
+# Should run every 10 minutes
 # Assumes US/Eastern timezone (yes still needs work)
+# Will eventually leverage a 'rising column'
 
 from datetime import datetime, timedelta
 import requests as requests
@@ -26,18 +28,23 @@ userid = dict_response_json['user']['id']
 # Set up request to HR endpoint
 url = 'https://api-7.whoop.com/users/{}/metrics/heart_rate'.format(userid)
 
+
 # Set five minute time range to pull data for
+# Currently hardcoded for EDT
 time_now = datetime.now()
-five_minutes = timedelta(minutes=5)
-five_minutes_ago = time_now - five_minutes
-five_minutes_ago = five_minutes_ago.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-time_now = time_now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+ten_minutes = timedelta(minutes=10)
+twenty_minutes = timedelta(minutes=20)
+four_hours = timedelta(hours=4)
+twenty_minutes_ago = time_now - twenty_minutes + four_hours
+ten_minutes_ago = time_now - ten_minutes + four_hours
+twenty_minutes_ago = twenty_minutes_ago.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+ten_minutes_ago = ten_minutes_ago.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 params = {
     'sort': 't',
     'step': '60',
-    'start': five_minutes_ago,
-    'end': time_now
+    'start': twenty_minutes_ago,
+    'end': ten_minutes_ago
 }
 
 headers = {
@@ -62,9 +69,7 @@ splunk_payload = ""
 
 for x in values:
     event_time = x['time']
-    four_hours = 14400000
-    zulu_time = event_time + four_hours
-    splunk_payload = splunk_payload + '{"time": ' + str(zulu_time) + ', "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "hr_data", "sourcetype": "' + hec_hr_sourcetype + '", "event": ' + json.dumps(x) + '}'
+    splunk_payload = splunk_payload + '{"time": ' + str(event_time) + ', "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "hr_data", "sourcetype": "' + hec_hr_sourcetype + '", "event": ' + json.dumps(x) + '}'
 
 
 # Set HEC header
@@ -73,3 +78,4 @@ auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
 # Send HEC event to Splunk
 r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
 print("Splunk HEC post status: \n", r.text)
+print("\nSplunk Payload:\t", splunk_payload)

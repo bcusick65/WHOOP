@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
-import pytz
+# Author: Brian Cusick
+# Pull daily cycle data at 24 hour interval
+# Should run once every 24 hours, pulls YESTERDAY's data
+# because recovery data isn't optimized until after sleep
+# Assumes US/Eastern timezone (yes still needs work)
+# Will eventually leverage a 'rising column'
+
+
+
+from datetime import datetime, timedelta
 import requests as requests
 from whoop_config import *
 import json
@@ -48,10 +56,13 @@ userid = dict_response_json['user']['id']
 # Set up request
 url = 'https://api-7.whoop.com/users/{}/cycles'.format(userid)
 
-# Set today as the time range
-x = datetime.now()
-start = x.strftime("%Y-%m-%dT00:00:00.000Z")
-end = x.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+# Set yesterday as the time range
+time_now = datetime.now()
+one_day = timedelta(hours=24)
+start = time_now - one_day
+end = time_now - one_day
+start = start.strftime("%Y-%m-%dT00:00:00.000Z")
+end = end.strftime("%Y-%m-%dT23:59:59.000Z")
 
 params = {
 	'start': start,
