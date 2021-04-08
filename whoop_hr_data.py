@@ -78,4 +78,3 @@ auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
 # Send HEC event to Splunk
 r = requests.post(url=hec_endpoint, data=splunk_payload, headers=auth_header)
 print("Splunk HEC post status: \n", r.text)
-print("\nSplunk Payload:\t", splunk_payload)

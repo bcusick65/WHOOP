@@ -18,6 +18,7 @@ import json
 auth_header = {'Authorization': 'Splunk ' + hec_hr_token}
 splunk_payload = ""
 response_json = ""
+workout_id = ""
 
 # Get access creds
 def get_oauth_creds():
@@ -88,12 +89,32 @@ values = r.json()
 
 # Stack events for Splunk HEC payload and adjust Splunk timezone issue
 for x in values:
+	# Find any workouts of the date in question, send to Splunk
+	workouts = x['strain']['workouts']
+	for i in workouts:
+		print("workout_id:\t", workout_id)
+		workout_time = i['during']['upper']
+		workout_time = datetime.strptime(workout_time, "%Y-%m-%dT%H:%M:%S.%f%z")
+		workout_time = str(workout_time.timestamp() * 1000)
+		workout_time = str(round(float(workout_time)))
+		workout_payload = '{"time": "' + workout_time + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "workout_data", "sourcetype": "whoop:workout", "event": ' + json.dumps(i) + '}'
+		print(json.dumps(i))
+		r = requests.post(url=hec_endpoint, data=workout_payload, headers=auth_header)
+		# Get workout survey details
+		workout_id = i['id']
+		workout_id_str = str(workout_id)
+		workout_survey_request = requests.get(url='https://api-7.whoop.com/users/{a}/workouts/{b}/survey-response'.format(a=userid, b=workout_id), headers=headers)
+		workout_survey_payload = workout_survey_request.json()
+		workout_survey_payload_combined = ""
+		for w in workout_survey_payload:
+			workout_survey_payload_combined = workout_survey_payload_combined + '{"time": "' + workout_time + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "' + workout_id_str + '", "sourcetype": "whoop:workout:survey", "event": ' + json.dumps(
+				w) + '}'
+		workout_survey_post = requests.post(url=hec_endpoint, data=workout_survey_payload_combined, headers=auth_header)
+
 	event_time = x['recovery']['timestamp']
-	print(event_time)
 	event_time = datetime.strptime(event_time, "%Y-%m-%dT%H:%M:%S.%f%z")
 	event_time = str(event_time.timestamp() * 1000)
 	event_time = str(round(float(event_time)))
-	print(event_time)
 	splunk_payload = splunk_payload + '{"time": "' + str(
 		event_time) + '", "host": "api-7.whoop.com", "index": "' + hec_index + '","source": "cycles_data", "sourcetype": "' + hec_cycles_sourcetype + '", "event": ' + json.dumps(
 		x) + '}'
